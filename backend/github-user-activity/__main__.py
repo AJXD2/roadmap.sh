@@ -1,4 +1,4 @@
-from urllib import request
+from urllib import request, error
 import sys
 import json
 
@@ -30,8 +30,28 @@ def display_activity(events: list[dict]) -> None:
 
 
 if __name__ == "__main__":
-    args = sys.argv.copy()
-    username = args[1]
-    request = request.urlopen(f"https://api.github.com/users/{username}/events")
-    data = json.loads(request.read())
-    display_activity(data)
+    try:
+        args = sys.argv.copy()
+        if len(args) < 2:
+            print("Usage: github-user-activity <github-username>")
+            sys.exit(1)
+
+        username = args[1]
+        url = f"https://api.github.com/users/{username}/events"
+        response = request.urlopen(url)
+        data = json.loads(response.read())
+        display_activity(data)
+
+    except error.HTTPError as e:
+        if e.code == 403:
+            print("Rate limit exceeded! Try again later.")
+        elif e.code == 404:
+            print(f"User '{username}' not found.")
+        else:
+            print(f"HTTPError: {e.code} - {e.reason}")
+    except error.URLError as e:
+        print(f"Failed to fetch data: {e.reason}")
+    except json.JSONDecodeError:
+        print("Failed to parse JSON response.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
